@@ -21,37 +21,16 @@ import {
   Droplets,
   HelpCircle,
   Sparkles,
-  PlusCircle,
-  X,
-  Camera,
-  Mic,
-  Send,
-  Navigation
+  ArrowRight
 } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CategoryBadge } from "@/components/common/CategoryBadge";
 import { ComplaintCategory } from "@/types/database";
 
 export default function HomePage() {
-  const { complaints, wards, audits, setRole, submitComplaint } = useCivicStore();
+  const { complaints, wards, audits, setRole } = useCivicStore();
   const [mapTab, setMapTab] = useState<"MAP" | "LIST">("MAP");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-
-  // Form State for Citizen Complaint
-  const [formTitle, setFormTitle] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-  const [formCategory, setFormCategory] = useState<ComplaintCategory>("POTHOLE");
-  const [formLat, setFormLat] = useState<number>(26.9124);
-  const [formLng, setFormLng] = useState<number>(75.7891);
-  const [formAddress, setFormAddress] = useState("Civil Lines, Jaipur Metro Corridor");
-  const [formImageUrl, setFormImageUrl] = useState("https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80");
-  const [submitResult, setSubmitResult] = useState<{
-    status: string;
-    action: string;
-    message: string;
-    distanceMeters?: number;
-  } | null>(null);
 
   // Core Aggregations
   const totalComplaints = complaints.length;
@@ -160,78 +139,57 @@ export default function HomePage() {
     return true;
   });
 
-  const handleLodgeComplaint = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formTitle.trim()) return;
-
-    const res = submitComplaint({
-      title: formTitle,
-      description: formDesc || "Lodge via citizen intake form",
-      category: formCategory,
-      latitude: formLat,
-      longitude: formLng,
-      address_text: formAddress,
-      image_url: formImageUrl,
-      ai_transcription: formDesc,
-    });
-
-    setSubmitResult({
-      status: res.status,
-      action: res.action,
-      message: res.message,
-      distanceMeters: res.distanceMeters,
-    });
-
-    setTimeout(() => {
-      setShowSubmitModal(false);
-      setSubmitResult(null);
-      setFormTitle("");
-      setFormDesc("");
-    }, 2500);
-  };
-
   return (
     <div className="space-y-8">
-      {/* Eye-Catching Hero Section with Mesh Gradient Banner */}
+      {/* Hero Section - Dedicated to Municipal Management & Oversight */}
       <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 md:p-10 border border-indigo-500/20 bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 shadow-2xl shadow-indigo-950/50">
-        {/* Glow ambient circles */}
+        {/* Ambient Glows */}
         <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-transparent blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-gradient-to-tr from-cyan-500/20 via-indigo-500/20 to-transparent blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-200 text-xs font-semibold backdrop-blur-md shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-spin-slow" />
-              <span>AI-Powered Municipal Governance Platform</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-200 text-xs font-semibold backdrop-blur-md shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+              <span>Municipal Administrative Control Center</span>
             </div>
             
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
-              Smarter Cities. <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-400">Faster Resolutions.</span>
+              Complaint Management <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-400">& Governance Suite</span>
             </h1>
             
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Real-time geodetic intake, 20-meter proximity deduplication clustering, and end-to-end SLA tracking across municipal wards.
+              Unified command center for ward-level incident triage, automated contractor work order dispatch, GPS dual-photo verification, and SLA compliance tracking.
             </p>
           </div>
 
-          {/* Action Buttons */}
+          {/* Quick Management Access Cards */}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowSubmitModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 ring-1 ring-white/30 hover:scale-105 transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Lodge Complaint</span>
-            </button>
-
             <Link
               href="/supervisor"
               onClick={() => setRole("WARD_SUPERVISOR")}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 ring-1 ring-white/30 hover:scale-105 transition-all"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Ward Authority Console</span>
+            </Link>
+
+            <Link
+              href="/crew"
+              onClick={() => setRole("FIELD_CREW")}
               className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 hover:text-white font-semibold text-sm backdrop-blur-md transition-all"
             >
-              <ShieldCheck className="w-4 h-4 text-purple-400" />
-              <span>Supervisor Console</span>
+              <HardHat className="w-4 h-4 text-amber-400" />
+              <span>Field Work Orders</span>
+            </Link>
+
+            <Link
+              href="/commissioner"
+              onClick={() => setRole("MUNICIPAL_COMMISSIONER")}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 hover:text-white font-semibold text-sm backdrop-blur-md transition-all"
+            >
+              <Landmark className="w-4 h-4 text-purple-400" />
+              <span>Commissioner Overview</span>
             </Link>
           </div>
         </div>
@@ -359,7 +317,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Middle Section: Category Breakdown & Ward Performance */}
+      {/* Middle Section: Department Redressal Rate & Ward Performance Leaderboard */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Category Breakdown */}
         <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-5">
@@ -372,7 +330,7 @@ export default function HomePage() {
               <p className="text-xs text-slate-400 mt-0.5">Resolution progress by civic hazard category</p>
             </div>
             <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">
-              {totalComplaints} Total Reports
+              {totalComplaints} Managed Incidents
             </span>
           </div>
 
@@ -474,21 +432,21 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Live GIS Map & Transparency Feed */}
+      {/* Live Geographic Map & Management Incident Filter */}
       <div className="rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <MapPin className="w-5 h-5 text-pink-400" />
-              <span>Live Geographic Complaint Map</span>
+              <span>Live Geographic Incident Oversight Map</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Interactive municipal ward polygons and geocoded incident markers
+              Interactive municipal ward boundaries, GIS spatial routing, and geocoded incident pins
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Status Filter Tabs with Gradient Selection */}
+            {/* Status Filter Tabs */}
             <div className="flex p-1 bg-slate-950 border border-slate-800 rounded-xl text-xs shadow-inner">
               {[
                 { id: "ALL", label: "All" },
@@ -540,7 +498,7 @@ export default function HomePage() {
           <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
             {filteredComplaints.length === 0 ? (
               <div className="p-12 text-center text-slate-500 text-xs">
-                No complaints found matching filter.
+                No incidents found matching filter.
               </div>
             ) : (
               filteredComplaints.map((c) => (
@@ -595,116 +553,6 @@ export default function HomePage() {
           ))}
         </div>
       </div>
-
-      {/* Citizen Lodge Complaint Modal */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-indigo-500/30 p-6 sm:p-8 shadow-2xl shadow-purple-950/50 space-y-5">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setShowSubmitModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-pink-500/40 transition-all"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/30 mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Direct Citizen Intake</span>
-              </div>
-              <h3 className="text-xl font-extrabold text-white tracking-tight">
-                Lodge a Civic Complaint
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Spatial GIS engine will auto-route your complaint and check for nearby duplicates.
-              </p>
-            </div>
-
-            {submitResult ? (
-              <div className={`p-4 rounded-2xl border text-center space-y-2 ${
-                submitResult.action === "UPVOTED"
-                  ? "bg-purple-950/60 border-purple-500/40 text-purple-200"
-                  : "bg-emerald-950/60 border-emerald-500/40 text-emerald-200"
-              }`}>
-                <div className="font-bold text-sm">
-                  {submitResult.action === "UPVOTED" ? "⚡ Proximity Duplicate Merged!" : "✅ Complaint Successfully Registered!"}
-                </div>
-                <div className="text-xs text-slate-300">{submitResult.message}</div>
-              </div>
-            ) : (
-              <form onSubmit={handleLodgeComplaint} className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Incident Title / Summary *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="e.g., Deep pothole near crossing"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Category
-                    </label>
-                    <select
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as ComplaintCategory)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    >
-                      <option value="POTHOLE">Roads & Potholes</option>
-                      <option value="GARBAGE">Sanitation & Garbage</option>
-                      <option value="STREETLIGHT">Streetlight / Power</option>
-                      <option value="WATER_LEAK">Water Leak</option>
-                      <option value="OTHER">Public Hazard / Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Location / Ward Sector
-                    </label>
-                    <input
-                      type="text"
-                      value={formAddress}
-                      onChange={(e) => setFormAddress(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Description & Observations
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formDesc}
-                    onChange={(e) => setFormDesc(e.target.value)}
-                    placeholder="Provide details or landmarks..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 ring-1 ring-white/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Submit & Route to Ward Queue</span>
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
