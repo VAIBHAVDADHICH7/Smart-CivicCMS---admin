@@ -1,35 +1,51 @@
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
-# testing
+# Testing & Coverage
 /coverage
+*.lcov
 
-# next.js
+# Next.js Build Output
 /.next/
 /out/
-
-# production
 /build
 
-# misc
-.DS_Store
-*.pem
+# Local Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env*.local
 
-# debug
+# Vercel & Deploy CLI Artifacts
+.vercel
+
+# Supabase Local Cache & State
+supabase/.temp/
+.supabase/
+
+# TypeScript & Cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+*.pem
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Debug Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# local env files
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Docker
+.docker

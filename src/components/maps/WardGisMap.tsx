@@ -171,6 +171,10 @@ export const WardGisMap: React.FC<WardGisMapProps> = ({
 
     return () => {
       isMounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [complaints, wards, selectedWardId, selectedComplaintId, onSelectComplaint, onMapClick, center, zoom]);
 

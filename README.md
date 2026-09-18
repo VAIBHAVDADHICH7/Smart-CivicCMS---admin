@@ -1,7 +1,32 @@
 # CivicPulse AI (Smart Civic CMS v2.0.0)
 ### Multi-Tier Municipal Complaint Redressal & Operational Governance Platform
 
+[![Next.js 15](https://img.shields.io/badge/Next.js-15.2.1-black?logo=next.js)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React-19.0.0-blue?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostGIS%2015+-3ECF8E?logo=supabase)](https://supabase.com/)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Production%20Ready-000000?logo=vercel)](https://vercel.com/)
+[![Deployed on Render](https://img.shields.io/badge/Render-Blueprint%20Ready-46E3B7?logo=render)](https://render.com/)
+
 CivicPulse AI is a cloud-decoupled, event-driven municipal governance platform engineered to eliminate civic triage bottlenecks, mass duplicate spam, and contractor fraud across four explicit operational tiers: **Citizen**, **Field Crew**, **Ward Supervisor**, and **Municipal Commissioner**.
+
+---
+
+## 🚀 Production Deployment Quick Links
+
+The project is fully pre-configured for instant deployment to production environments:
+
+- 📖 **Full Multi-Platform Deployment Guide**: See [**`DEPLOYMENT.md`**](./DEPLOYMENT.md) for step-by-step setup on GitHub, Supabase, Vercel, and Render.
+- 🗄️ **Supabase Backend Architecture & Edge Functions**: See [**`SUPABASE_BACKEND_SETUP.md`**](./SUPABASE_BACKEND_SETUP.md).
+- 🏥 **Diagnostic Health Probe**: Available at `/api/health` for uptime and cloud connectivity verification.
+
+| Target Platform | Deployment Method | Key Files |
+| :--- | :--- | :--- |
+| **GitHub** | CI/CD Automated Workflow | [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) |
+| **Supabase** | PostGIS Migrations & Edge Functions | [`supabase/migrations/`](./supabase/migrations/), [`supabase/functions/`](./supabase/functions/) |
+| **Vercel** | Edge Deployment & Caching | [`vercel.json`](./vercel.json), [`next.config.ts`](./next.config.ts) |
+| **Render** | Render Blueprint / Docker | [`render.yaml`](./render.yaml), [`Dockerfile`](./Dockerfile) |
 
 ---
 
@@ -51,7 +76,7 @@ Upon supervisor approval, tickets enter a 48-hour countdown window with options 
 
 ---
 
-## 🚀 Quick Start & Local Execution
+## 💻 Local Development & Testing
 
 ### 1. Install Dependencies
 ```bash
@@ -64,19 +89,19 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Seamless Role Switching
-Use the persistent header bar to instantly toggle between:
-- 📱 `/citizen` — Citizen PWA
-- 👷 `/crew` — Field Crew Task Queue
-- 🏢 `/supervisor` — Ward Supervisor Command Board
-- 🏛️ `/commissioner` — Executive Macro Governance
+### 3. Build for Production
+```bash
+npm run build
+npm start
+```
 
 ---
 
 ## 🗄️ Database Architecture (PostgreSQL 15+ & PostGIS)
 
 The platform is designed to connect with Supabase or any standard PostgreSQL instance with PostGIS enabled:
-- **`supabase/schema.sql`**: Full DDL, GiST spatial indexing, triggers (`auto_assign_ward`, `calculate_sla_deadline`), stored procedure (`check_duplicate_complaint`), and Row Level Security (RLS) policies.
+- **`supabase/migrations/20250101000000_init_civic_schema.sql`**: Full DDL, GiST spatial indexing, triggers (`auto_assign_ward`, `calculate_sla_deadline`), stored procedure (`check_duplicate_complaint`), and Row Level Security (RLS) policies.
 - **`supabase/seed.sql`**: Pre-seeded municipal wards (polygons for Civil Lines, Mansarovar, Vaishali Nagar, and C-Scheme), profiles, and sample complaints across all lifecycle stages.
+- **`supabase/functions/`**: 4 Deno TypeScript Edge Functions for intake webhook, crew proof verification, supervisor dispatch, and approval gate.
 
 *(The application also includes an in-memory & local-storage reactive PostGIS simulation engine that works out-of-the-box immediately without requiring external database provisioning upfront).*

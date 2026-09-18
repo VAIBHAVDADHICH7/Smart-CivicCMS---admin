@@ -131,6 +131,10 @@ export const MacroHeatmap: React.FC<MacroHeatmapProps> = ({
 
     return () => {
       isMounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [complaints, wards, onSelectWard]);
 

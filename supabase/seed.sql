@@ -40,6 +40,7 @@ INSERT INTO wards (id, name, zone, boundary) VALUES
 
 -- 2. Insert Profiles (Mock Auth Identifiers)
 INSERT INTO profiles (id, full_name, phone, role, ward_id) VALUES
+('11111111-1111-1111-1111-111111111111', 'Aarav Sharma (Verified Citizen)', '+91 98290 11111', 'FIELD_CREW', 'WARD_14'),
 ('22222222-2222-2222-2222-222222222222', 'Ramesh Kumar (Roads & Potholes)', '+91 98290 23456', 'FIELD_CREW', 'WARD_14'),
 ('22222222-2222-2222-2222-333333333333', 'Mohan Lal (Sanitation Crew)', '+91 98290 34567', 'FIELD_CREW', 'WARD_15'),
 ('33333333-3333-3333-3333-111111111111', 'Er. Anita Verma (Supervisor W-14)', '+91 98290 45678', 'WARD_SUPERVISOR', 'WARD_14'),
