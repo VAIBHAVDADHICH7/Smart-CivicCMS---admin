@@ -17,7 +17,7 @@ import {
 
 export const Header: React.FC = () => {
   const router = useRouter();
-  const { currentRole, setRole, currentProfile, wards, resetToSeed } = useCivicStore();
+  const { currentRole, setRole, currentProfile, wards, resetToSeed, isSupabaseActive } = useCivicStore();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
   const currentWard = wards.find((w) => w.id === currentProfile.ward_id) || wards[0];
@@ -72,15 +72,15 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           {/* Supabase Connection Status Badge */}
           <div 
-            title={useCivicStore().isSupabaseActive ? "Connected to live Supabase PostgreSQL" : "Using local reactive state. Add Supabase keys in .env.local to activate cloud database."}
+            title={isSupabaseActive ? "Connected to live Supabase PostgreSQL" : "Using local reactive state. Add Supabase keys in .env.local to activate cloud database."}
             className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-              useCivicStore().isSupabaseActive 
+              isSupabaseActive 
                 ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400" 
                 : "bg-slate-800/80 border-slate-700 text-slate-400"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${useCivicStore().isSupabaseActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
-            <span>{useCivicStore().isSupabaseActive ? "Supabase Live" : "Local State"}</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+            <span>{isSupabaseActive ? "Supabase Live" : "Local State"}</span>
           </div>
 
           {/* Desktop Segments */}
