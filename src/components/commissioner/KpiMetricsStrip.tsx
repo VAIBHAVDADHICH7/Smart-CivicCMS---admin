@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useCivicStore } from "@/lib/store";
-import { BarChart3, Clock, AlertOctagon, Layers } from "lucide-react";
+import { BarChart3, Clock, AlertOctagon, Layers, Sparkles } from "lucide-react";
 
 export const KpiMetricsStrip: React.FC = () => {
   const { complaints } = useCivicStore();
@@ -21,50 +21,60 @@ export const KpiMetricsStrip: React.FC = () => {
     {
       title: "City Grievances",
       value: `${total}`,
-      subtext: `${resolved} resolved, ${active} active`,
+      subtext: `${resolved} resolved, ${active} in progress`,
       icon: BarChart3,
-      color: "text-blue-400",
+      gradient: "from-indigo-950/40 via-slate-900 to-slate-950",
+      border: "border-indigo-500/30 hover:border-indigo-400/50",
+      iconBg: "bg-gradient-to-tr from-indigo-600 to-cyan-400 text-white shadow-indigo-500/30",
     },
     {
       title: "Avg Resolution Time",
       value: "18.4h",
-      subtext: "Category benchmark: <24h",
+      subtext: "Benchmark SLA: <24h",
       icon: Clock,
-      color: "text-emerald-400",
+      gradient: "from-emerald-950/40 via-slate-900 to-slate-950",
+      border: "border-emerald-500/30 hover:border-emerald-400/50",
+      iconBg: "bg-gradient-to-tr from-emerald-600 to-teal-400 text-white shadow-emerald-500/30",
     },
     {
-      title: "Overdue SLAs",
+      title: "Overdue Breaches",
       value: `${escalated}`,
-      subtext: "Breached resolution deadlines",
+      subtext: "Penalties applied to vendors",
       icon: AlertOctagon,
-      color: "text-rose-400",
+      gradient: "from-rose-950/40 via-slate-900 to-slate-950",
+      border: "border-rose-500/30 hover:border-rose-400/50",
+      iconBg: "bg-gradient-to-tr from-rose-600 to-red-400 text-white shadow-rose-500/30",
     },
     {
-      title: "Deduplication Rate",
+      title: "Deduplication Gain",
       value: `${deduplicationGain}%`,
       subtext: "20m proximity clustering gain",
       icon: Layers,
-      color: "text-purple-400",
+      gradient: "from-purple-950/40 via-slate-900 to-slate-950",
+      border: "border-purple-500/30 hover:border-purple-400/50",
+      iconBg: "bg-gradient-to-tr from-purple-600 to-pink-400 text-white shadow-purple-500/30",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
           <div
             key={idx}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-2"
+            className={`rounded-3xl p-5 border bg-gradient-to-b ${card.gradient} ${card.border} shadow-xl backdrop-blur-xl space-y-3 transition-all hover:-translate-y-0.5`}
           >
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-medium">{card.title}</span>
-              <Icon className={`w-4 h-4 ${card.color}`} />
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="text-xs font-bold">{card.title}</span>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-md ${card.iconBg}`}>
+                <Icon className="w-4 h-4" />
+              </div>
             </div>
 
             <div>
-              <div className="text-xl sm:text-2xl font-bold text-white tracking-tight">{card.value}</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">{card.subtext}</div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{card.value}</div>
+              <div className="text-xs text-slate-400 font-medium mt-1">{card.subtext}</div>
             </div>
           </div>
         );

@@ -19,16 +19,39 @@ import {
   Trash2,
   Lightbulb,
   Droplets,
-  HelpCircle
+  HelpCircle,
+  Sparkles,
+  PlusCircle,
+  X,
+  Camera,
+  Mic,
+  Send,
+  Navigation
 } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CategoryBadge } from "@/components/common/CategoryBadge";
 import { ComplaintCategory } from "@/types/database";
 
 export default function HomePage() {
-  const { complaints, wards, audits, setRole } = useCivicStore();
+  const { complaints, wards, audits, setRole, submitComplaint } = useCivicStore();
   const [mapTab, setMapTab] = useState<"MAP" | "LIST">("MAP");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+  // Form State for Citizen Complaint
+  const [formTitle, setFormTitle] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formCategory, setFormCategory] = useState<ComplaintCategory>("POTHOLE");
+  const [formLat, setFormLat] = useState<number>(26.9124);
+  const [formLng, setFormLng] = useState<number>(75.7891);
+  const [formAddress, setFormAddress] = useState("Civil Lines, Jaipur Metro Corridor");
+  const [formImageUrl, setFormImageUrl] = useState("https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80");
+  const [submitResult, setSubmitResult] = useState<{
+    status: string;
+    action: string;
+    message: string;
+    distanceMeters?: number;
+  } | null>(null);
 
   // Core Aggregations
   const totalComplaints = complaints.length;
@@ -48,42 +71,48 @@ export default function HomePage() {
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     color: string;
-    barColor: string;
+    barGradient: string;
+    bgGradient: string;
   }[] = [
     {
       category: "POTHOLE",
       label: "Roads & Potholes",
       icon: AlertTriangle,
       color: "text-amber-400",
-      barColor: "bg-amber-500",
+      barGradient: "bg-gradient-to-r from-amber-500 to-orange-500",
+      bgGradient: "from-amber-500/10 to-orange-500/5",
     },
     {
       category: "GARBAGE",
       label: "Sanitation & Waste",
       icon: Trash2,
       color: "text-emerald-400",
-      barColor: "bg-emerald-500",
+      barGradient: "bg-gradient-to-r from-emerald-500 to-teal-500",
+      bgGradient: "from-emerald-500/10 to-teal-500/5",
     },
     {
       category: "STREETLIGHT",
       label: "Streetlights & Power",
       icon: Lightbulb,
       color: "text-yellow-400",
-      barColor: "bg-yellow-500",
+      barGradient: "bg-gradient-to-r from-yellow-400 to-amber-500",
+      bgGradient: "from-yellow-500/10 to-amber-500/5",
     },
     {
       category: "WATER_LEAK",
       label: "Water Supply & Leaks",
       icon: Droplets,
       color: "text-cyan-400",
-      barColor: "bg-cyan-500",
+      barGradient: "bg-gradient-to-r from-cyan-400 to-blue-500",
+      bgGradient: "from-cyan-500/10 to-blue-500/5",
     },
     {
       category: "OTHER",
       label: "Public Safety & Other",
       icon: HelpCircle,
       color: "text-purple-400",
-      barColor: "bg-purple-500",
+      barGradient: "bg-gradient-to-r from-purple-500 to-pink-500",
+      bgGradient: "from-purple-500/10 to-pink-500/5",
     },
   ];
 
@@ -131,210 +160,247 @@ export default function HomePage() {
     return true;
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Live Dashboard Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-              Live Operations Dashboard
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live System</span>
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Real-time redressal metrics, complaint removal tracking, and ward infrastructure status.
-          </p>
-        </div>
+  const handleLodgeComplaint = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formTitle.trim()) return;
 
-        {/* Quick Staff Portal Jump Bar */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl text-xs">
-          <span className="text-[11px] text-slate-500 px-2 hidden lg:inline">Quick Jump:</span>
-          <Link
-            href="/crew"
-            onClick={() => setRole("FIELD_CREW")}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <HardHat className="w-3.5 h-3.5 text-amber-400" />
-            <span>Field Crew</span>
-          </Link>
-          <Link
-            href="/supervisor"
-            onClick={() => setRole("WARD_SUPERVISOR")}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-            <span>Ward Authority</span>
-          </Link>
-          <Link
-            href="/commissioner"
-            onClick={() => setRole("MUNICIPAL_COMMISSIONER")}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <Landmark className="w-3.5 h-3.5 text-purple-400" />
-            <span>Commissioner</span>
-          </Link>
+    const res = submitComplaint({
+      title: formTitle,
+      description: formDesc || "Lodge via citizen intake form",
+      category: formCategory,
+      latitude: formLat,
+      longitude: formLng,
+      address_text: formAddress,
+      image_url: formImageUrl,
+      ai_transcription: formDesc,
+    });
+
+    setSubmitResult({
+      status: res.status,
+      action: res.action,
+      message: res.message,
+      distanceMeters: res.distanceMeters,
+    });
+
+    setTimeout(() => {
+      setShowSubmitModal(false);
+      setSubmitResult(null);
+      setFormTitle("");
+      setFormDesc("");
+    }, 2500);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Eye-Catching Hero Section with Mesh Gradient Banner */}
+      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 md:p-10 border border-indigo-500/20 bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 shadow-2xl shadow-indigo-950/50">
+        {/* Glow ambient circles */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-gradient-to-tr from-cyan-500/20 via-indigo-500/20 to-transparent blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-200 text-xs font-semibold backdrop-blur-md shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400 animate-spin-slow" />
+              <span>AI-Powered Municipal Governance Platform</span>
+            </div>
+            
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+              Smarter Cities. <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-400">Faster Resolutions.</span>
+            </h1>
+            
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              Real-time geodetic intake, 20-meter proximity deduplication clustering, and end-to-end SLA tracking across municipal wards.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowSubmitModal(true)}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 ring-1 ring-white/30 hover:scale-105 transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Lodge Complaint</span>
+            </button>
+
+            <Link
+              href="/supervisor"
+              onClick={() => setRole("WARD_SUPERVISOR")}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 hover:text-white font-semibold text-sm backdrop-blur-md transition-all"
+            >
+              <ShieldCheck className="w-4 h-4 text-purple-400" />
+              <span>Supervisor Console</span>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Primary Live KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Metric 1: Complaints Removed / Resolved */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Resolved & Fixed</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+      {/* Primary Live KPI Cards with Distinct Gradient Accents */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        {/* Metric 1: Resolved */}
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-emerald-500/30 bg-gradient-to-b from-emerald-950/40 via-slate-900 to-slate-950 shadow-lg shadow-emerald-950/20 space-y-2 group hover:border-emerald-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Fixed & Verified</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {resolvedComplaints}
             </div>
-            <div className="text-[11px] text-emerald-400 font-medium mt-0.5">
+            <div className="text-[11px] font-bold text-emerald-300 mt-0.5">
               {resolutionRate}% resolved
             </div>
           </div>
-          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-700"
               style={{ width: `${resolutionRate}%` }}
             />
           </div>
         </div>
 
-        {/* Metric 2: Active Repair Backlog */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Under Repair</span>
-            <div className="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+        {/* Metric 2: In Progress */}
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-sky-500/30 bg-gradient-to-b from-sky-950/40 via-slate-900 to-slate-950 shadow-lg shadow-sky-950/20 space-y-2 group hover:border-sky-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Under Repair</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-400 text-white flex items-center justify-center shadow-md shadow-sky-500/30">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {inProgressComplaints}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] font-medium text-sky-300 mt-0.5">
               Crews deployed
             </div>
           </div>
-          <div className="text-[10px] text-sky-400/80">Active field work</div>
+          <div className="text-[10px] text-sky-400/80 font-medium">Active field work</div>
         </div>
 
         {/* Metric 3: Pending Triage */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Pending Triage</span>
-            <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-amber-500/30 bg-gradient-to-b from-amber-950/40 via-slate-900 to-slate-950 shadow-lg shadow-amber-950/20 space-y-2 group hover:border-amber-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Pending Triage</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-400 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
               <Activity className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {pendingComplaints}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] font-medium text-amber-300 mt-0.5">
               Awaiting dispatch
             </div>
           </div>
-          <div className="text-[10px] text-amber-400/80">In ward inbox</div>
+          <div className="text-[10px] text-amber-400/80 font-medium">In ward inbox</div>
         </div>
 
-        {/* Metric 4: Overdue Breaches */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Overdue SLA</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
+        {/* Metric 4: Overdue SLA */}
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-rose-500/30 bg-gradient-to-b from-rose-950/40 via-slate-900 to-slate-950 shadow-lg shadow-rose-950/20 space-y-2 group hover:border-rose-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Overdue SLA</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 to-red-400 text-white flex items-center justify-center shadow-md shadow-rose-500/30">
               <AlertOctagon className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {escalatedComplaints}
             </div>
-            <div className="text-[11px] text-rose-400 font-medium mt-0.5">
-              {escalatedComplaints === 0 ? "Zero breaches" : "Requires escalation"}
+            <div className="text-[11px] font-bold text-rose-300 mt-0.5">
+              {escalatedComplaints === 0 ? "Zero breaches" : "Needs escalation"}
             </div>
           </div>
-          <div className="text-[10px] text-slate-500">Contract penalty risk</div>
+          <div className="text-[10px] text-rose-400/80 font-medium">Penalty risk</div>
         </div>
 
-        {/* Metric 5: Average Resolution Time */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Avg Turnaround</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+        {/* Metric 5: Average Turnaround */}
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-indigo-500/30 bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-950 shadow-lg shadow-indigo-950/20 space-y-2 group hover:border-indigo-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Avg Turnaround</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-400 text-white flex items-center justify-center shadow-md shadow-indigo-500/30">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               18.4h
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] font-medium text-indigo-300 mt-0.5">
               Target: &lt;24h
             </div>
           </div>
-          <div className="text-[10px] text-emerald-400/80">Within SLA target</div>
+          <div className="text-[10px] text-indigo-400/80 font-medium">Fast SLA compliance</div>
         </div>
 
-        {/* Metric 6: Deduplication Rate */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-medium text-slate-300">Dedup Gain</span>
-            <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+        {/* Metric 6: Dedup Gain */}
+        <div className="relative overflow-hidden rounded-2xl p-4 border border-purple-500/30 bg-gradient-to-b from-purple-950/40 via-slate-900 to-slate-950 shadow-lg shadow-purple-950/20 space-y-2 group hover:border-purple-400/50 transition-all">
+          <div className="flex items-center justify-between text-slate-300">
+            <span className="text-xs font-semibold">Dedup Gain</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-400 text-white flex items-center justify-center shadow-md shadow-purple-500/30">
               <Layers className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {dedupGainPercent}%
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] font-medium text-purple-300 mt-0.5">
               {duplicateSavedCount} merged
             </div>
           </div>
-          <div className="text-[10px] text-purple-400/80">20m proximity saved</div>
+          <div className="text-[10px] text-purple-400/80 font-medium">20m proximity saved</div>
         </div>
       </div>
 
       {/* Middle Section: Category Breakdown & Ward Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Category Breakdown (6 cols on lg) */}
-        <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Category Breakdown */}
+        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
-              <h2 className="text-sm font-semibold text-white">Department Redressal Rate</h2>
-              <p className="text-xs text-slate-400">Resolution progress by civic hazard category</p>
+              <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                <span>Department Redressal Rate</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">Resolution progress by civic hazard category</p>
             </div>
-            <span className="text-xs text-slate-400">{totalComplaints} Total Reports</span>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">
+              {totalComplaints} Total Reports
+            </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {categoryStats.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.category} className="space-y-1.5">
+                <div key={item.category} className="space-y-1.5 p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/30 transition-all">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <Icon className={`w-3.5 h-3.5 ${item.color}`} />
-                      <span className="font-medium text-slate-200">{item.label}</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-1.5 rounded-lg bg-slate-900 ${item.color}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className="font-semibold text-slate-200">{item.label}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                      <span className="text-emerald-400 font-medium">{item.resolved} Fixed</span>
+                    <div className="flex items-center gap-2 text-slate-400 text-xs">
+                      <span className="text-emerald-400 font-bold">{item.resolved} Fixed</span>
                       <span>/</span>
                       <span>{item.total} Total</span>
-                      <span className="font-medium text-white ml-1">{item.pct}%</span>
+                      <span className="font-extrabold text-white px-2 py-0.5 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-500/30">
+                        {item.pct}%
+                      </span>
                     </div>
                   </div>
 
-                  <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800/80">
+                  <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800/60 shadow-inner">
                     <div
-                      className={`h-full ${item.barColor} rounded-full transition-all duration-500`}
+                      className={`h-full ${item.barGradient} rounded-full transition-all duration-700 shadow-sm`}
                       style={{ width: `${item.pct}%` }}
                     />
                   </div>
@@ -344,53 +410,60 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Ward Leaderboard (6 cols on lg) */}
-        <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        {/* Ward Performance Leaderboard */}
+        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
-              <h2 className="text-sm font-semibold text-white">Ward Redressal Performance</h2>
-              <p className="text-xs text-slate-400">Response speed and resolution rate across administrative wards</p>
+              <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span>Ward Redressal Performance</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">Response speed and resolution across administrative wards</p>
             </div>
-            <span className="text-xs text-slate-400">{wards.length} Wards Active</span>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+              {wards.length} Wards Active
+            </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {wardStats.map((w, idx) => (
               <div
                 key={w.ward.id}
-                className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs"
+                className="p-3.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800/90 hover:border-indigo-500/40 rounded-2xl space-y-2.5 text-xs transition-all shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold flex items-center justify-center">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-500 text-white text-[11px] font-bold flex items-center justify-center shadow-sm">
                       {idx + 1}
                     </span>
-                    <span className="font-semibold text-white">{w.ward.name}</span>
-                    <span className="text-[10px] text-slate-500">({w.ward.zone})</span>
+                    <div>
+                      <span className="font-bold text-white text-sm">{w.ward.name}</span>
+                      <span className="text-[11px] text-indigo-300/70 ml-1.5">({w.ward.zone})</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <span className="text-slate-400 text-[11px]">
-                      Avg: <span className="text-emerald-400 font-medium">{w.avgHours}</span>
+                      Avg: <span className="text-emerald-400 font-bold">{w.avgHours}</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold text-[11px]">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs">
                       {w.rate}% Fixed
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-[11px] text-center pt-1 border-t border-slate-800/60">
-                  <div className="bg-slate-900/80 p-1.5 rounded-lg">
-                    <span className="text-slate-400 block text-[10px]">Resolved</span>
-                    <span className="font-semibold text-emerald-400">{w.resolved}</span>
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-800/80">
+                  <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Resolved</span>
+                    <span className="font-bold text-emerald-400 text-xs">{w.resolved}</span>
                   </div>
-                  <div className="bg-slate-900/80 p-1.5 rounded-lg">
-                    <span className="text-slate-400 block text-[10px]">Active</span>
-                    <span className="font-semibold text-sky-400">{w.active}</span>
+                  <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Active</span>
+                    <span className="font-bold text-sky-400 text-xs">{w.active}</span>
                   </div>
-                  <div className="bg-slate-900/80 p-1.5 rounded-lg">
-                    <span className="text-slate-400 block text-[10px]">Overdue</span>
-                    <span className={`font-semibold ${w.overdue > 0 ? "text-rose-400" : "text-slate-500"}`}>
+                  <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800/60">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Overdue</span>
+                    <span className={`font-bold text-xs ${w.overdue > 0 ? "text-rose-400" : "text-slate-500"}`}>
                       {w.overdue}
                     </span>
                   </div>
@@ -402,21 +475,21 @@ export default function HomePage() {
       </div>
 
       {/* Live GIS Map & Transparency Feed */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <div className="rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-rose-400" />
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-pink-400" />
               <span>Live Geographic Complaint Map</span>
             </h2>
-            <p className="text-xs text-slate-400">
-              Interactive municipal ward boundaries and geocoded incident pins
+            <p className="text-xs text-slate-400 mt-0.5">
+              Interactive municipal ward polygons and geocoded incident markers
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Status Filter Tabs */}
-            <div className="flex p-0.5 bg-slate-950 border border-slate-800 rounded-lg text-xs">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Status Filter Tabs with Gradient Selection */}
+            <div className="flex p-1 bg-slate-950 border border-slate-800 rounded-xl text-xs shadow-inner">
               {[
                 { id: "ALL", label: "All" },
                 { id: "RESOLVED", label: "Fixed" },
@@ -427,9 +500,9 @@ export default function HomePage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                     statusFilter === tab.id
-                      ? "bg-blue-600 text-white font-medium shadow-sm"
+                      ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/30"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -438,19 +511,19 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* Mobile View Toggle */}
-            <div className="flex sm:hidden p-0.5 bg-slate-950 border border-slate-800 rounded-lg text-xs">
+            {/* Mobile View Switcher */}
+            <div className="flex sm:hidden p-1 bg-slate-950 border border-slate-800 rounded-xl text-xs">
               <button
                 type="button"
                 onClick={() => setMapTab("MAP")}
-                className={`px-2 py-1 rounded ${mapTab === "MAP" ? "bg-blue-600 text-white font-medium" : "text-slate-400"}`}
+                className={`px-2.5 py-1 rounded-lg font-semibold ${mapTab === "MAP" ? "bg-purple-600 text-white" : "text-slate-400"}`}
               >
                 Map
               </button>
               <button
                 type="button"
                 onClick={() => setMapTab("LIST")}
-                className={`px-2 py-1 rounded ${mapTab === "LIST" ? "bg-blue-600 text-white font-medium" : "text-slate-400"}`}
+                className={`px-2.5 py-1 rounded-lg font-semibold ${mapTab === "LIST" ? "bg-purple-600 text-white" : "text-slate-400"}`}
               >
                 List
               </button>
@@ -460,24 +533,24 @@ export default function HomePage() {
 
         {/* Map / List View Container */}
         {mapTab === "MAP" ? (
-          <div className="w-full h-[400px] sm:h-[450px] rounded-xl overflow-hidden border border-slate-800">
+          <div className="w-full h-[420px] sm:h-[480px] rounded-2xl overflow-hidden border border-indigo-500/20 shadow-inner">
             <WardGisMap complaints={filteredComplaints} wards={wards} />
           </div>
         ) : (
-          <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
             {filteredComplaints.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs">
+              <div className="p-12 text-center text-slate-500 text-xs">
                 No complaints found matching filter.
               </div>
             ) : (
               filteredComplaints.map((c) => (
-                <div key={c.id} className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1.5 text-xs">
+                <div key={c.id} className="p-4 bg-slate-950/80 border border-slate-800/90 rounded-2xl space-y-2 text-xs hover:border-purple-500/40 transition-all shadow-md">
                   <div className="flex items-center justify-between">
                     <CategoryBadge category={c.category} />
                     <StatusBadge status={c.status} size="sm" />
                   </div>
-                  <div className="font-medium text-white">{c.title}</div>
-                  <div className="text-slate-400 text-[11px] truncate">{c.address_text}</div>
+                  <div className="font-bold text-white text-sm">{c.title}</div>
+                  <div className="text-slate-400 text-xs truncate">{c.address_text}</div>
                 </div>
               ))
             )}
@@ -485,40 +558,153 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Live System Activity Feed */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+      {/* Live System Activity Feed with Glowing Stream Cards */}
+      <div className="rounded-3xl p-5 sm:p-6 border border-indigo-500/20 bg-slate-900/90 backdrop-blur-xl shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div>
-            <h3 className="text-sm font-semibold text-slate-200">
-              Live Municipal Operations Stream
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live Municipal Operations Stream</span>
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 mt-0.5">
               Recent supervisor dispatches, field crew completions, and resolution sign-offs
             </p>
           </div>
-          <span className="text-xs text-slate-500">{audits.length} events logged</span>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
+            {audits.length} Events Logged
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           {audits.slice(0, 3).map((a) => (
             <div
               key={a.id}
-              className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5"
+              className="p-4 rounded-2xl bg-gradient-to-b from-slate-950 to-slate-900 border border-slate-800 text-xs space-y-2 hover:border-indigo-500/40 transition-all shadow-md"
             >
               <div className="flex items-center justify-between text-slate-400">
-                <span className="font-medium text-white flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span>{a.actor_name || "System"}</span>
+                <span className="font-bold text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400" />
+                  <span>{a.actor_name || "System Automated"}</span>
                 </span>
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-slate-500 font-medium">
                   {new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">{a.remarks}</p>
+              <p className="text-xs text-slate-300 leading-relaxed">{a.remarks}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Citizen Lodge Complaint Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-indigo-500/30 p-6 sm:p-8 shadow-2xl shadow-purple-950/50 space-y-5">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowSubmitModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white border border-slate-700 hover:border-pink-500/40 transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-purple-300 text-xs font-semibold border border-purple-500/30 mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Direct Citizen Intake</span>
+              </div>
+              <h3 className="text-xl font-extrabold text-white tracking-tight">
+                Lodge a Civic Complaint
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Spatial GIS engine will auto-route your complaint and check for nearby duplicates.
+              </p>
+            </div>
+
+            {submitResult ? (
+              <div className={`p-4 rounded-2xl border text-center space-y-2 ${
+                submitResult.action === "UPVOTED"
+                  ? "bg-purple-950/60 border-purple-500/40 text-purple-200"
+                  : "bg-emerald-950/60 border-emerald-500/40 text-emerald-200"
+              }`}>
+                <div className="font-bold text-sm">
+                  {submitResult.action === "UPVOTED" ? "⚡ Proximity Duplicate Merged!" : "✅ Complaint Successfully Registered!"}
+                </div>
+                <div className="text-xs text-slate-300">{submitResult.message}</div>
+              </div>
+            ) : (
+              <form onSubmit={handleLodgeComplaint} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Incident Title / Summary *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    placeholder="e.g., Deep pothole near crossing"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Category
+                    </label>
+                    <select
+                      value={formCategory}
+                      onChange={(e) => setFormCategory(e.target.value as ComplaintCategory)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    >
+                      <option value="POTHOLE">Roads & Potholes</option>
+                      <option value="GARBAGE">Sanitation & Garbage</option>
+                      <option value="STREETLIGHT">Streetlight / Power</option>
+                      <option value="WATER_LEAK">Water Leak</option>
+                      <option value="OTHER">Public Hazard / Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Location / Ward Sector
+                    </label>
+                    <input
+                      type="text"
+                      value={formAddress}
+                      onChange={(e) => setFormAddress(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Description & Observations
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formDesc}
+                    onChange={(e) => setFormDesc(e.target.value)}
+                    placeholder="Provide details or landmarks..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-500/30 ring-1 ring-white/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Submit & Route to Ward Queue</span>
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
