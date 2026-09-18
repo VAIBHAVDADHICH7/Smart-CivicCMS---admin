@@ -3,19 +3,25 @@ import { INITIAL_COMPLAINTS, INITIAL_WARDS } from "@/lib/seedData";
 import { checkDuplicateComplaint, resolveWardFromCoordinates } from "@/lib/spatial";
 import { processIntakeMedia } from "@/lib/aiProcessing";
 import { LinkedTicket, Complaint } from "@/types/database";
+import { 
+  isSupabaseConfigured, 
+  getSupabaseClient, 
+  insertComplaintToSupabase, 
+  updateComplaintInSupabase,
+  insertAuditLogToSupabase 
+} from "@/lib/supabase";
 
 /**
  * Automation Intake Webhook
  * Pipeline:
  * 1. Intake (Webhook): Receives text, audio, or photo
  * 2. Media Filter & AI Processing:
- *    - Media Check: checks if audio or image is attached
  *    - Voice Transcription: converts audio recording into text
  *    - Photo Analysis: Vision AI identifies category and creates visual fingerprint
  *    - Merge: combines media metadata into clean package
  * 3. Location & Spatial Lookup (Ward Lookup):
  *    - Uses GPS coordinates to run GIS query and pinpoints ward ID
- * 4. Deduplication Check (Dedup Check -> Media Check1):
+ * 4. Deduplication Check:
  *    - 20-meter radius check
  *    - True (Duplicate): Upvote Master Ticket + Insert Linked Ticket (child report)
  *    - False (New): Creates new master ticket + generates dispatch order
@@ -59,8 +65,13 @@ export async function POST(request: Request) {
     // Step 3: Location & Spatial Lookup (Ward Lookup)
     const wardId = resolveWardFromCoordinates(lat, lng, INITIAL_WARDS);
 
-    // Step 4: Deduplication Check (Dedup Check -> Media Check1)
+    // Step 4: Deduplication Check (20m radius)
     const dedupResult = checkDuplicateComplaint(lat, lng, INITIAL_COMPLAINTS, 20.0);
+
+    const generateId = () => 
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "c" + Date.now().toString(16) + "-" + Math.random().toString(16).substring(2, 10);
 
     if (dedupResult.isDuplicate && dedupResult.duplicateIncident) {
       // Branch: TRUE (Duplicate Found)
@@ -68,10 +79,11 @@ export async function POST(request: Request) {
 
       // 1. Upvote Master Ticket
       masterTicket.upvotes_count += 1;
+      masterTicket.updated_at = new Date().toISOString();
 
       // 2. Insert Linked Ticket (Child report attached to master)
       const linkedChildTicket: LinkedTicket = {
-        id: "child-" + Date.now().toString().slice(-6),
+        id: generateId(),
         parent_ticket_id: masterTicket.id,
         citizen_id: citizen_id || "citizen-webhook-user",
         text_content: mediaOutput.textContent,
@@ -90,7 +102,39 @@ export async function POST(request: Request) {
       }
       masterTicket.linked_tickets.push(linkedChildTicket);
 
-      // Merge1 output
+      if (isSupabaseConfigured()) {
+        await updateComplaintInSupabase(masterTicket.id, {
+          upvotes_count: masterTicket.upvotes_count,
+          updated_at: masterTicket.updated_at,
+        });
+
+        const client = getSupabaseClient();
+        if (client) {
+          await client.from("linked_tickets").insert({
+            id: linkedChildTicket.id,
+            parent_ticket_id: masterTicket.id,
+            citizen_id: linkedChildTicket.citizen_id,
+            text_content: linkedChildTicket.text_content,
+            audio_url: linkedChildTicket.audio_url,
+            ai_transcription: linkedChildTicket.ai_transcription,
+            image_url: linkedChildTicket.image_url,
+            visual_fingerprint: linkedChildTicket.visual_fingerprint,
+            location: `SRID=4326;POINT(${lng} ${lat})`,
+            distance_from_master_meters: linkedChildTicket.distance_from_master_meters,
+            created_at: linkedChildTicket.created_at,
+          });
+        }
+
+        await insertAuditLogToSupabase({
+          id: generateId(),
+          complaint_id: masterTicket.id,
+          actor_name: "Intake Webhook Engine",
+          action: "LINKED_CHILD_TICKET",
+          remarks: `Matched nearby report at ${dedupResult.distanceMeters}m. Master upvoted to ${masterTicket.upvotes_count}.`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
       return NextResponse.json({
         status: "SUCCESS",
         pipeline_route: "DUPLICATE_MERGED",
@@ -126,7 +170,7 @@ export async function POST(request: Request) {
     const slaDeadline = new Date(Date.now() + slaHours * 3600000).toISOString();
 
     const newMasterTicket: Complaint = {
-      id: "ticket-" + Date.now().toString().slice(-6),
+      id: generateId(),
       citizen_id: citizen_id || "citizen-webhook-user",
       title: text ? text.slice(0, 80) : `${targetCategory.replace("_", " ")} reported via intake`,
       description: mediaOutput.textContent,
@@ -151,6 +195,19 @@ export async function POST(request: Request) {
     };
 
     INITIAL_COMPLAINTS.unshift(newMasterTicket);
+
+    if (isSupabaseConfigured()) {
+      await insertComplaintToSupabase(newMasterTicket);
+      await insertAuditLogToSupabase({
+        id: generateId(),
+        complaint_id: newMasterTicket.id,
+        actor_name: "Intake Webhook Engine",
+        action: "CREATED",
+        to_status: "PENDING",
+        remarks: `Master ticket ingested and auto-routed to ${wardId} queue.`,
+        created_at: new Date().toISOString(),
+      });
+    }
 
     return NextResponse.json({
       status: "SUCCESS",

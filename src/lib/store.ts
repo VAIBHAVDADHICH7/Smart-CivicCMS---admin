@@ -1,7 +1,8 @@
 "use client";
 
 // CivicPulse AI - Unified Reactive State & Event Store
-// Implements the Intake Webhook, Media Processing, Ward Lookup & Deduplication Pipeline
+// Connects seamlessly to Supabase PostgreSQL / PostGIS with Realtime subscriptions,
+// with robust fallback to reactive in-memory state.
 
 import { useState, useEffect } from "react";
 import { 
@@ -24,6 +25,16 @@ import {
   resolveWardFromCoordinates, 
   validateResolutionProximity 
 } from "./spatial";
+import {
+  isSupabaseConfigured,
+  getSupabaseClient,
+  fetchComplaintsFromSupabase,
+  fetchAuditsFromSupabase,
+  insertComplaintToSupabase,
+  updateComplaintInSupabase,
+  insertAuditLogToSupabase,
+  mapDbComplaintToDomain,
+} from "./supabase";
 
 const STORAGE_KEY_COMPLAINTS = "civicpulse_complaints_v2";
 const STORAGE_KEY_AUDITS = "civicpulse_audits_v2";
@@ -40,6 +51,14 @@ let globalComplaints: Complaint[] = [];
 let globalAudits: ComplaintAuditLog[] = [];
 let globalCurrentRole: UserRole = "WARD_SUPERVISOR";
 let isInitialized = false;
+let isSupabaseHydrated = false;
+
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "c" + Date.now().toString(16) + "-" + Math.random().toString(16).substring(2, 10);
+}
 
 function initStore() {
   if (isInitialized) return;
@@ -86,6 +105,78 @@ export function useCivicStore() {
   useEffect(() => {
     const handleUpdate = () => setTick((t) => t + 1);
     listeners.add(handleUpdate);
+
+    // Hydrate from Supabase and subscribe to Realtime if configured
+    if (isSupabaseConfigured() && !isSupabaseHydrated) {
+      isSupabaseHydrated = true;
+
+      // 1. Initial hydration from Supabase PostgreSQL
+      Promise.all([fetchComplaintsFromSupabase(), fetchAuditsFromSupabase()]).then(
+        ([remoteComplaints, remoteAudits]) => {
+          if (remoteComplaints && remoteComplaints.length > 0) {
+            globalComplaints = remoteComplaints;
+          }
+          if (remoteAudits && remoteAudits.length > 0) {
+            globalAudits = remoteAudits;
+          }
+          saveStore();
+          notify();
+        }
+      );
+
+      // 2. Realtime WebSocket Subscription
+      const client = getSupabaseClient();
+      if (client) {
+        const channel = client
+          .channel("civicpulse_realtime_sync")
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "complaints" },
+            (payload) => {
+              if (payload.eventType === "INSERT") {
+                const newIncident = mapDbComplaintToDomain(payload.new);
+                const exists = globalComplaints.some((c) => c.id === newIncident.id);
+                if (!exists) {
+                  globalComplaints.unshift(newIncident);
+                  saveStore();
+                  notify();
+                }
+              } else if (payload.eventType === "UPDATE") {
+                const updated = mapDbComplaintToDomain(payload.new);
+                const idx = globalComplaints.findIndex((c) => c.id === updated.id);
+                if (idx !== -1) {
+                  globalComplaints[idx] = { ...globalComplaints[idx], ...updated };
+                  saveStore();
+                  notify();
+                }
+              } else if (payload.eventType === "DELETE") {
+                globalComplaints = globalComplaints.filter((c) => c.id !== payload.old.id);
+                saveStore();
+                notify();
+              }
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "complaint_audit_logs" },
+            (payload) => {
+              const newAudit = payload.new as ComplaintAuditLog;
+              if (!globalAudits.some((a) => a.id === newAudit.id)) {
+                globalAudits.unshift(newAudit);
+                saveStore();
+                notify();
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          listeners.delete(handleUpdate);
+          channel.unsubscribe();
+        };
+      }
+    }
+
     return () => {
       listeners.delete(handleUpdate);
     };
@@ -109,8 +200,6 @@ export function useCivicStore() {
   /**
    * Automation Pipeline:
    * Intake -> Media Check -> Transcribe/Vision -> Ward Lookup -> Dedup Check -> Branching
-   * If True (Duplicate): Upvote Master Ticket + Insert Linked Child Ticket
-   * If False (New): Insert Master Record + Generate Dispatch Order
    */
   const submitComplaint = (data: {
     title: string;
@@ -144,7 +233,7 @@ export function useCivicStore() {
 
       // Insert Linked Ticket (Child Report)
       const childTicket: LinkedTicket = {
-        id: "child-" + Date.now().toString().slice(-6),
+        id: generateUUID(),
         parent_ticket_id: master.id,
         citizen_id: data.citizen_id || currentProfile.id,
         text_content: data.description,
@@ -163,14 +252,23 @@ export function useCivicStore() {
       master.linked_tickets.push(childTicket);
 
       const audit: ComplaintAuditLog = {
-        id: "audit-" + Date.now(),
+        id: generateUUID(),
         complaint_id: master.id,
         actor_name: currentProfile.full_name,
         action: "LINKED_CHILD_TICKET",
-        remarks: `Matched nearby report at ${dupCheck.distanceMeters}m. Master upvoted to ${master.upvotes_count} and linked child report #${childTicket.id} attached.`,
+        remarks: `Matched nearby report at ${dupCheck.distanceMeters}m. Master upvoted to ${master.upvotes_count} and linked child report #${childTicket.id.slice(0, 8)} attached.`,
         created_at: new Date().toISOString(),
       };
       globalAudits.unshift(audit);
+
+      // Async sync to Supabase
+      if (isSupabaseConfigured()) {
+        updateComplaintInSupabase(master.id, {
+          upvotes_count: master.upvotes_count,
+          updated_at: master.updated_at,
+        });
+        insertAuditLogToSupabase(audit);
+      }
 
       saveStore();
       notify();
@@ -186,10 +284,8 @@ export function useCivicStore() {
     }
 
     // Branch: FALSE (New Ticket)
-    // Ward GIS Polygon Lookup (ST_Contains)
     const wardId = resolveWardFromCoordinates(data.latitude, data.longitude, INITIAL_WARDS);
 
-    // SLA Calculation
     const slaHoursMap: Record<ComplaintCategory, number> = {
       GARBAGE: 24,
       WATER_LEAK: 24,
@@ -201,7 +297,7 @@ export function useCivicStore() {
     const slaDeadline = new Date(Date.now() + slaHours * 3600000).toISOString();
 
     const newMasterTicket: Complaint = {
-      id: "ticket-" + Date.now().toString().slice(-6),
+      id: generateUUID(),
       citizen_id: data.citizen_id || currentProfile.id,
       title: data.title,
       description: data.description,
@@ -228,7 +324,7 @@ export function useCivicStore() {
     globalComplaints.unshift(newMasterTicket);
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: newMasterTicket.id,
       actor_name: currentProfile.full_name,
       action: "CREATED",
@@ -237,6 +333,12 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    // Async sync to Supabase
+    if (isSupabaseConfigured()) {
+      insertComplaintToSupabase(newMasterTicket);
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -265,7 +367,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "ASSIGNED",
@@ -275,6 +377,17 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        status: "ASSIGNED",
+        assigned_crew_id: crewId,
+        supervisor_id: currentProfile.id,
+        sla_deadline: ticket.sla_deadline,
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -314,7 +427,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "WORK_SUBMITTED",
@@ -324,6 +437,19 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        status: "WORK_SUBMITTED",
+        resolution_image_url: resolutionImg,
+        resolution_latitude: resolutionLat,
+        resolution_longitude: resolutionLng,
+        resolution_distance_meters: geoValidation.distanceMeters,
+        resolution_submitted_at: ticket.resolution_submitted_at,
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -347,7 +473,7 @@ export function useCivicStore() {
     ticket.updated_at = now.toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "RESOLVED",
@@ -357,6 +483,17 @@ export function useCivicStore() {
       created_at: now.toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        status: "RESOLVED",
+        supervisor_notes: ticket.supervisor_notes,
+        verified_at: ticket.verified_at,
+        reopen_window_closes_at: ticket.reopen_window_closes_at,
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -370,7 +507,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "STATUS_CHANGE",
@@ -380,6 +517,14 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        status: "ASSIGNED",
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -393,7 +538,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "STATUS_CHANGE",
@@ -403,6 +548,13 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -416,7 +568,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "DISPUTED_REOPEN",
@@ -426,6 +578,14 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        status: "REOPENED",
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -439,7 +599,7 @@ export function useCivicStore() {
     ticket.updated_at = new Date().toISOString();
 
     const audit: ComplaintAuditLog = {
-      id: "audit-" + Date.now(),
+      id: generateUUID(),
       complaint_id: ticket.id,
       actor_name: currentProfile.full_name,
       action: "UPVOTED",
@@ -447,6 +607,14 @@ export function useCivicStore() {
       created_at: new Date().toISOString(),
     };
     globalAudits.unshift(audit);
+
+    if (isSupabaseConfigured()) {
+      updateComplaintInSupabase(ticket.id, {
+        upvotes_count: ticket.upvotes_count,
+        updated_at: ticket.updated_at,
+      });
+      insertAuditLogToSupabase(audit);
+    }
 
     saveStore();
     notify();
@@ -459,6 +627,7 @@ export function useCivicStore() {
     profiles: INITIAL_PROFILES,
     currentRole: globalCurrentRole,
     currentProfile,
+    isSupabaseActive: isSupabaseConfigured(),
     setRole,
     resetToSeed,
     submitComplaint,

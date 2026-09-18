@@ -67,9 +67,10 @@ CREATE TABLE IF NOT EXISTS wards (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. User Profiles Table (Tied to Supabase Auth UUID)
+-- 4. User Profiles Table
 CREATE TABLE IF NOT EXISTS profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name VARCHAR(120) NOT NULL,
     phone VARCHAR(20),
     role user_role NOT NULL DEFAULT 'FIELD_CREW',

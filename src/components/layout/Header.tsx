@@ -70,6 +70,19 @@ export const Header: React.FC = () => {
 
         {/* Role Selector Controls */}
         <div className="flex items-center gap-2">
+          {/* Supabase Connection Status Badge */}
+          <div 
+            title={useCivicStore().isSupabaseActive ? "Connected to live Supabase PostgreSQL" : "Using local reactive state. Add Supabase keys in .env.local to activate cloud database."}
+            className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+              useCivicStore().isSupabaseActive 
+                ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400" 
+                : "bg-slate-800/80 border-slate-700 text-slate-400"
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${useCivicStore().isSupabaseActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+            <span>{useCivicStore().isSupabaseActive ? "Supabase Live" : "Local State"}</span>
+          </div>
+
           {/* Desktop Segments */}
           <div className="hidden md:flex items-center p-1 bg-slate-950/80 border border-slate-800 rounded-lg text-xs">
             {roles.map((r) => {
