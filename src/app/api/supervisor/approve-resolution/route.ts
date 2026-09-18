@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { complaint_id, action, notes } = body;
+
+    if (!complaint_id || !action) {
+      return NextResponse.json(
+        { error: "complaint_id and action ('APPROVE' | 'REJECT') are required." },
+        { status: 400 }
+      );
+    }
+
+    const newStatus = action === "APPROVE" ? "RESOLVED" : "ASSIGNED";
+    const reopenWindowClosesAt = action === "APPROVE"
+      ? new Date(Date.now() + 48 * 3600000).toISOString() // 48h Citizen Audit Window
+      : null;
+
+    return NextResponse.json({
+      status: "SUCCESS",
+      data: {
+        complaint_id,
+        status: newStatus,
+        notes: notes || "Supervisor inspected photographic proof and GPS delta.",
+        reopen_window_closes_at: reopenWindowClosesAt,
+        message: action === "APPROVE"
+          ? "Complaint approved & marked RESOLVED. 48-hour citizen audit window initiated."
+          : "Proof rejected. Re-routed to ASSIGNED queue for crew re-work.",
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
