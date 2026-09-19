@@ -1,5 +1,5 @@
-# CivicPulse AI (Smart Civic CMS v2.0.0)
-### Multi-Tier Municipal Complaint Redressal & Operational Governance Platform
+# Jan Setu — Bridging Complaints
+### Civic complaint redressal and operational response platform
 
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.2.1-black?logo=next.js)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.0.0-blue?logo=react)](https://react.dev/)

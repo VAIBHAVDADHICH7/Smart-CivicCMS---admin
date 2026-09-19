@@ -84,14 +84,14 @@ export const Footer: React.FC = () => {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-extrabold text-base tracking-tight text-white">
-                      CivicPulse
+                      Jan Setu
                     </span>
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      GovNet
+                      Bridge
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    Enterprise Municipal Operations & Governance Platform
+                    Bridging Complaints to Timely Action
                   </span>
                 </div>
               </Link>

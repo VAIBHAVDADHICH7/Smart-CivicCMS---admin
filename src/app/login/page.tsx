@@ -416,11 +416,11 @@ function LoginContent() {
               </div>
 
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                CivicPulse <span className="text-slate-200">Access Portal</span>
+                Jan Setu <span className="text-slate-200">Access Portal</span>
               </h1>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-lg">
-                Unified Role-Based Identity & Access Management for Municipal Commissioners, Ward Supervisory Engineers, and Field Operations Crews.
+                Unified access for citizens, supervisors, and crews to turn complaints into visible, accountable action.
               </p>
             </div>
 

@@ -18,9 +18,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CivicPulse — Municipal Operations Platform",
+  title: "Jan Setu — Bridging Complaints",
   description:
-    "Civic complaint triage, work order dispatch, and governance tracking platform for municipal operations.",
+    "A civic complaint platform that bridges citizen concerns to responsive local action and resolution.",
 };
 
 export default function RootLayout({
