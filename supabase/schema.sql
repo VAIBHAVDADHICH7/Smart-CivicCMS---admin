@@ -109,7 +109,14 @@ CREATE TABLE IF NOT EXISTS complaints (
     -- Field Crew Assignment & SLA Oversight
     assigned_crew_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     supervisor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    assigned_at TIMESTAMPTZ,
     sla_deadline TIMESTAMPTZ NOT NULL,
+    supervisor_sla_deadline TIMESTAMPTZ,
+    
+    -- Escalation & Inactivity Tracking (Module 4)
+    escalation_tier INT NOT NULL DEFAULT 0, -- 0: Normal, 1: Ward Supervisor Tier 1, 2: Commissioner Tier 2
+    escalated_at TIMESTAMPTZ,
+    escalation_reason TEXT,
     
     -- Fraud-Resistant Proof-of-Resolution Fields
     resolution_image_url TEXT,

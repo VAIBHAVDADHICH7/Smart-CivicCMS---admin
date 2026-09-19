@@ -55,7 +55,7 @@ export const RoleSwitcher: React.FC = () => {
       {roles.map((r) => {
         const Icon = r.icon;
         const isCurrentRole = currentRole === r.id;
-        const isCurrentPath = pathname.startsWith(r.path);
+        const isCurrentPath = pathname?.startsWith(r.path) ?? false;
         const isActive = isCurrentRole || isCurrentPath;
 
         return (

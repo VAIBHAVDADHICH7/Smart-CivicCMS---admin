@@ -83,9 +83,18 @@ serve(async (req) => {
       );
     }
 
-    // BRANCH: NEW TICKET
+    // BRANCH: NEW TICKET & AUTO-ASSIGNMENT
     const newTicketId = crypto.randomUUID();
     const targetCategory = category || "OTHER";
+
+    // Auto-detect designated crew from profiles table
+    const { data: activeCrews } = await supabaseClient
+      .from("profiles")
+      .select("id, full_name, ward_id")
+      .eq("role", "FIELD_CREW")
+      .eq("is_active", true);
+
+    const designatedCrew = (activeCrews && activeCrews.length > 0) ? activeCrews[0] : null;
 
     const { data: newTicket, error: insertErr } = await supabaseClient
       .from("complaints")
@@ -95,7 +104,9 @@ serve(async (req) => {
         title: text ? text.slice(0, 100) : `${targetCategory} reported`,
         description: text || "Complaint lodged via intake engine",
         category: targetCategory,
-        status: "PENDING",
+        status: designatedCrew ? "ASSIGNED" : "PENDING",
+        assigned_crew_id: designatedCrew ? designatedCrew.id : null,
+        assigned_at: designatedCrew ? new Date().toISOString() : null,
         location: `SRID=4326;POINT(${lng} ${lat})`,
         address_text: address_text || "Geocoded Municipal Sector",
         image_url: photo_url || "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80",
@@ -108,19 +119,35 @@ serve(async (req) => {
 
     if (insertErr) throw insertErr;
 
-    await supabaseClient.from("complaint_audit_logs").insert({
-      complaint_id: newTicketId,
-      actor_name: "Intake Webhook Engine",
-      action: "CREATED",
-      to_status: "PENDING",
-      remarks: "New complaint instantiated and auto-routed via GIS polygon trigger.",
-    });
+    const auditRemarks = designatedCrew
+      ? `Instantiated & auto-assigned directly to crew ${designatedCrew.full_name}. Push alert sent.`
+      : "New complaint instantiated and auto-routed via GIS polygon trigger.";
+
+    await supabaseClient.from("complaint_audit_logs").insert([
+      {
+        complaint_id: newTicketId,
+        actor_name: "Intake Webhook Engine",
+        action: "CREATED",
+        to_status: "PENDING",
+        remarks: "New complaint instantiated and auto-routed via GIS polygon trigger.",
+      },
+      ...(designatedCrew ? [{
+        complaint_id: newTicketId,
+        actor_name: "Auto-Assignment Engine",
+        action: "ASSIGNED" as const,
+        from_status: "PENDING" as const,
+        to_status: "ASSIGNED" as const,
+        remarks: auditRemarks,
+      }] : [])
+    ]);
 
     return new Response(
       JSON.stringify({
         status: "SUCCESS",
         pipeline_route: "NEW_TICKET_CREATED",
+        action: designatedCrew ? "AUTO_ASSIGNED_TO_CREW" : "PENDING_TRIAGE",
         ticket: newTicket,
+        assigned_crew: designatedCrew ? { id: designatedCrew.id, name: designatedCrew.full_name } : null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
