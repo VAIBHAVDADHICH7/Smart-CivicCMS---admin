@@ -20,7 +20,11 @@ import {
   Flame,
   ArrowRight,
   TrendingUp,
-  Cpu
+  Cpu,
+  DatabaseZap,
+  RefreshCw,
+  CircleCheck,
+  CircleX
 } from "lucide-react";
 
 interface SimulationCenterModalProps {
@@ -40,7 +44,7 @@ export const SimulationCenterModal: React.FC<SimulationCenterModalProps> = ({
     resetToSeed 
   } = useCivicStore();
 
-  const [activeTab, setActiveTab] = useState<"INJECT" | "TIME_WARP" | "AI_COPILOT">("INJECT");
+  const [activeTab, setActiveTab] = useState<"INJECT" | "TIME_WARP" | "AI_COPILOT" | "DB_SYNC">("INJECT");
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
   const [customTitle, setCustomTitle] = useState("");
   const [customDesc, setCustomDesc] = useState("");
@@ -52,6 +56,8 @@ export const SimulationCenterModal: React.FC<SimulationCenterModalProps> = ({
   const [submissionFeedback, setSubmissionFeedback] = useState<string | null>(null);
   const [escalationFeedback, setEscalationFeedback] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [syncResult, setSyncResult] = useState<Record<string, unknown> | null>(null);
 
   const presets = [
     {
@@ -160,6 +166,24 @@ export const SimulationCenterModal: React.FC<SimulationCenterModalProps> = ({
     setEscalationFeedback(res.summary);
   };
 
+  const handleRunSync = async () => {
+    setSyncStatus("running");
+    setSyncResult(null);
+    soundFx.playAction();
+    try {
+      const res = await fetch("/api/sync/import-complaints", { method: "POST" });
+      const json = await res.json();
+      setSyncResult(json);
+      setSyncStatus(res.ok ? "done" : "error");
+      if (res.ok) soundFx.playSuccess();
+      else soundFx.playWarning();
+    } catch (err: unknown) {
+      setSyncResult({ error: err instanceof Error ? err.message : "Network error" });
+      setSyncStatus("error");
+      soundFx.playWarning();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -237,6 +261,19 @@ export const SimulationCenterModal: React.FC<SimulationCenterModalProps> = ({
           >
             <Bot className="w-3.5 h-3.5" />
             <span>3. AI Triage Telemetry</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab("DB_SYNC"); soundFx.playClick(); }}
+            className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === "DB_SYNC"
+                ? "border-amber-400 text-amber-300"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <DatabaseZap className="w-3.5 h-3.5" />
+            <span>4. Source DB Sync</span>
           </button>
         </div>
 
@@ -504,6 +541,91 @@ export const SimulationCenterModal: React.FC<SimulationCenterModalProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 4: SOURCE DB SYNC */}
+          {activeTab === "DB_SYNC" && (
+            <div className="space-y-5">
+              {/* Info card */}
+              <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-white text-sm">
+                  <DatabaseZap className="w-4 h-4 text-amber-400" />
+                  <span>External Complaint Feed Ingestion</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Pulls all complaints from your source Supabase database and upserts them into this project&apos;s database.
+                  Safe to re-run — duplicate records are automatically skipped via ID-based conflict resolution.
+                </p>
+                <div className="font-mono text-[11px] bg-slate-950/60 rounded-xl px-3 py-2 border border-slate-800 space-y-0.5">
+                  <div className="text-slate-400">Source <span className="text-amber-300">sganafwxemitcilryxgc.supabase.co</span></div>
+                  <div className="text-slate-400">Destination <span className="text-sky-300">yceqxowlpllgszolebrm.supabase.co</span></div>
+                </div>
+              </div>
+
+              {/* Result banner */}
+              {syncResult && (
+                <div className={`p-4 rounded-2xl border text-xs animate-fade-in space-y-3 ${
+                  syncStatus === "done"
+                    ? "bg-emerald-950/50 border-emerald-500/40 text-emerald-200"
+                    : "bg-rose-950/50 border-rose-500/40 text-rose-200"
+                }`}>
+                  <div className="flex items-center gap-2 font-bold text-sm text-white">
+                    {syncStatus === "done"
+                      ? <CircleCheck className="w-4 h-4 text-emerald-400" />
+                      : <CircleX className="w-4 h-4 text-rose-400" />
+                    }
+                    <span>{syncStatus === "done" ? "Sync Complete" : "Sync Failed"}</span>
+                  </div>
+                  {syncStatus === "done" && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
+                        <div className="text-lg font-extrabold text-white">{String(syncResult.total_fetched ?? 0)}</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Fetched</div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-800 text-center">
+                        <div className="text-lg font-extrabold text-emerald-300">{String(syncResult.imported ?? 0)}</div>
+                        <div className="text-[10px] text-emerald-400 uppercase font-semibold">Imported</div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
+                        <div className="text-lg font-extrabold text-slate-300">{String(syncResult.skipped ?? 0)}</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Skipped</div>
+                      </div>
+                    </div>
+                  )}
+                  {Boolean(syncResult.source_table) && (
+                    <div className="font-mono text-[11px] text-slate-400">
+                      Source table: <span className="text-amber-300">{String(syncResult.source_table)}</span>
+                    </div>
+                  )}
+                  {Boolean(syncResult.error) && (
+                    <div className="font-mono text-[11px] text-rose-300">{String(syncResult.error)}</div>
+                  )}
+                  {Array.isArray(syncResult.errors) && (syncResult.errors as string[]).length > 0 && (
+                    <div className="font-mono text-[11px] text-rose-300">{(syncResult.errors as string[]).join(" | ")}</div>
+                  )}
+                </div>
+              )}
+
+              {/* Trigger button */}
+              <button
+                type="button"
+                onClick={handleRunSync}
+                disabled={syncStatus === "running"}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs shadow-lg shadow-amber-950/40 transition-all flex items-center justify-center gap-2"
+              >
+                {syncStatus === "running" ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Syncing from Source Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <DatabaseZap className="w-4 h-4" />
+                    <span>Run Source DB Complaint Sync Now</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
