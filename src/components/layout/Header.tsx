@@ -2,32 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCivicStore } from "@/lib/store";
 import { soundFx } from "@/lib/soundEffects";
-import { UserRole } from "@/types/database";
 import { 
   Building2, 
   MapPin, 
   ChevronDown, 
-  HardHat, 
-  ShieldCheck, 
-  Landmark, 
   Sparkles, 
   User, 
   LogOut, 
-  Settings, 
   LogIn, 
-  KeyRound, 
   BadgeCheck, 
   Clock, 
-  Radio,
-  Command,
-  Volume2,
+  Command, 
+  Volume2, 
   VolumeX,
-  FileText
+  Settings,
+  KeyRound
 } from "lucide-react";
-import { UserProfileModal } from "@/components/auth/UserProfileModal";
 import { NotificationCenter } from "@/components/common/NotificationCenter";
 import { CommandPalette } from "@/components/common/CommandPalette";
 import { SimulationCenterModal } from "@/components/common/SimulationCenterModal";
@@ -35,11 +28,9 @@ import { ExportReportModal } from "@/components/commissioner/ExportReportModal";
 
 export const Header: React.FC = () => {
   const router = useRouter();
-  const pathname = usePathname();
-  const { currentRole, currentProfile, currentUser, isAuthenticated, wards, logout } = useCivicStore();
+  const { currentProfile, isAuthenticated, wards, logout } = useCivicStore();
   
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [simulationModalOpen, setSimulationModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -72,19 +63,7 @@ export const Header: React.FC = () => {
     };
   }, []);
 
-  const currentWard = wards.find((w) => w.id === currentProfile.ward_id) || wards[0];
-
-  const roles: {
-    id: UserRole;
-    name: string;
-    roleDesc: string;
-    path: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }[] = [
-    { id: "FIELD_CREW", name: "Field Crew", roleDesc: "Repairs & Proof", path: "/crew", icon: HardHat },
-    { id: "WARD_SUPERVISOR", name: "Ward Supervisor", roleDesc: "Dispatch & Audit", path: "/supervisor", icon: ShieldCheck },
-    { id: "MUNICIPAL_COMMISSIONER", name: "Commissioner", roleDesc: "City Governance", path: "/commissioner", icon: Landmark },
-  ];
+  const currentWard = wards.find((w) => w.id === currentProfile?.ward_id) || wards[0];
 
   const handleLogout = () => {
     soundFx.playClick();
@@ -135,31 +114,8 @@ export const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Center Role Navigation Consoles */}
-          <div className="hidden md:flex items-center gap-1 bg-slate-900/80 border border-slate-700/80 rounded-2xl p-1 text-xs shadow-inner">
-            {roles.map((r) => {
-              const Icon = r.icon;
-              const isCurrent = pathname?.startsWith(r.path) ?? false;
-              return (
-                <Link
-                  key={r.id}
-                  href={r.path}
-                  onClick={() => soundFx.playClick()}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all font-semibold ${
-                    isCurrent
-                      ? "bg-slate-100 text-slate-900 shadow-sm"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{r.name}</span>
-                </Link>
-              );
-            })}
-          </div>
-
           {/* Right Action Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* Command Palette ⌘K Trigger Button */}
             <button
               type="button"
@@ -216,8 +172,8 @@ export const Header: React.FC = () => {
             {/* Notification Center */}
             <NotificationCenter />
 
-            {/* User Account / IAM Menu Controls */}
-            {isAuthenticated ? (
+            {/* User Account / Sign In & Sign Off Profile Icon Menu */}
+            {isAuthenticated && currentProfile ? (
               <div className="relative">
                 <button
                   type="button"
@@ -225,18 +181,19 @@ export const Header: React.FC = () => {
                     soundFx.playClick();
                     setUserMenuOpen(!userMenuOpen);
                   }}
-                  className="flex items-center gap-2 p-1.5 pr-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-indigo-500/30 shadow-md transition-all group"
+                  className="flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-indigo-500/30 shadow-md transition-all group"
+                  title="Account Profile & Sign Off"
                 >
                   <div className="relative">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xs ring-1 ring-white/20">
-                      {currentProfile.full_name.charAt(0)}
+                      {currentProfile.full_name?.charAt(0) || "U"}
                     </div>
                     <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${currentProfile.is_active ? "bg-emerald-400" : "bg-slate-500"}`} />
                   </div>
 
                   <div className="text-left hidden sm:block">
                     <div className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors flex items-center gap-1">
-                      <span>{currentProfile.full_name.split(" ")[0]}</span>
+                      <span>{currentProfile.full_name?.split(" ")[0]}</span>
                       <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" />
                     </div>
                     <div className="text-[9px] text-indigo-300 font-medium">
@@ -250,55 +207,30 @@ export const Header: React.FC = () => {
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-slate-900/95 backdrop-blur-2xl border border-indigo-500/30 rounded-2xl shadow-2xl py-2 z-50 animate-fade-in">
-                    {/* User Header Details */}
+                    {/* User Profile Header Details */}
                     <div className="px-4 py-2.5 border-b border-indigo-500/20">
                       <div className="font-bold text-xs text-white">{currentProfile.full_name}</div>
                       <div className="text-[11px] text-slate-400 truncate">{currentProfile.email || "staff@civicpulse.gov"}</div>
-                      {currentProfile.employee_id && (
-                        <div className="text-[10px] font-mono text-indigo-300 mt-0.5">
-                          ID: {currentProfile.employee_id}
-                        </div>
-                      )}
+                      <div className="text-[10px] text-indigo-300 font-semibold mt-0.5 flex items-center justify-between">
+                        <span>{currentProfile.role?.replace(/_/g, " ")}</span>
+                        {currentProfile.employee_id && (
+                          <span className="font-mono text-slate-400">ID: {currentProfile.employee_id}</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Menu Actions */}
+                    {/* Menu Actions - Sign In & Sign Off */}
                     <div className="p-1.5 space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          soundFx.playClick();
-                          setProfileModalOpen(true);
-                          setUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
-                      >
-                        <Settings className="w-4 h-4 text-indigo-400" />
-                        <span>Profile & Duty Settings</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          soundFx.playClick();
-                          setExportModalOpen(true);
-                          setUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
-                      >
-                        <FileText className="w-4 h-4 text-sky-400" />
-                        <span>Export Governance Brief</span>
-                      </button>
-
                       <Link
                         href="/login"
                         onClick={() => {
                           soundFx.playClick();
                           setUserMenuOpen(false);
                         }}
-                        className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors font-medium"
                       >
-                        <KeyRound className="w-4 h-4 text-purple-400" />
-                        <span>Switch Staff Persona / Re-auth</span>
+                        <LogIn className="w-4 h-4 text-indigo-400" />
+                        <span>Sign In / Switch Account</span>
                       </Link>
 
                       <div className="border-t border-slate-800 my-1" />
@@ -308,8 +240,8 @@ export const Header: React.FC = () => {
                         onClick={handleLogout}
                         className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 text-xs text-rose-300 hover:bg-rose-500/10 transition-colors font-semibold"
                       >
-                        <LogOut className="w-4 h-4" />
-                        <span>Log Out</span>
+                        <LogOut className="w-4 h-4 text-rose-400" />
+                        <span>Sign Off</span>
                       </button>
                     </div>
                   </div>
@@ -319,21 +251,16 @@ export const Header: React.FC = () => {
               <Link
                 href="/login"
                 onClick={() => soundFx.playClick()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-900 hover:bg-white font-bold text-xs shadow-sm transition-all"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all group"
+                title="Sign In to Municipal Portal"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Staff Sign In</span>
+                <span>Sign In</span>
               </Link>
             )}
           </div>
         </div>
       </header>
-
-      {/* Profile Modal */}
-      <UserProfileModal
-        isOpen={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-      />
 
       {/* Command Palette Modal */}
       <CommandPalette

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCivicStore } from "@/lib/store";
-import { soundFx } from "@/lib/soundEffects";
 import { 
   CheckCircle2, 
   Clock, 
@@ -23,19 +22,10 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
-  PlusCircle,
   Search,
   ThumbsUp,
   X,
-  ExternalLink,
-  ChevronRight,
   Shield,
-  Check,
-  Flame,
-  Radio,
-  Eye,
-  Command,
-  SlidersHorizontal,
   FileText
 } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -187,7 +177,6 @@ export default function HomePage() {
 
   const handleUpvote = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    soundFx.playSuccess();
     upvoteComplaint(id);
   };
 
@@ -202,7 +191,7 @@ export default function HomePage() {
           <div className="max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/90 px-3.5 py-1.5 text-[11px] font-semibold text-slate-200 shadow-sm backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping-slow" />
-              <span>Municipal Operations Command Center • PostGIS Spatial Engine</span>
+              <span>Operations Dashboard</span>
             </div>
             
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
@@ -233,26 +222,20 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-2.5 pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setSimulationModalOpen(true);
-                }}
+                onClick={() => setSimulationModalOpen(true)}
                 className="px-3.5 py-1.5 rounded-xl bg-sky-950/80 hover:bg-sky-900/80 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
               >
                 <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                <span>Launch Simulation Lab</span>
+                <span>Simulation Lab</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setExportModalOpen(true);
-                }}
+                onClick={() => setExportModalOpen(true)}
                 className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-inner"
               >
                 <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Export Governance Brief</span>
+                <span>Export Brief</span>
               </button>
             </div>
           </div>
@@ -261,10 +244,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto">
             <Link
               href="/supervisor"
-              onClick={() => {
-                soundFx.playClick();
-                setRole("WARD_SUPERVISOR");
-              }}
+              onClick={() => setRole("WARD_SUPERVISOR")}
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-slate-100 via-white to-slate-200 text-slate-950 font-extrabold text-sm shadow-xl transition-all hover:scale-[1.02]"
             >
               <ShieldCheck className="w-5 h-5 text-indigo-950" />
@@ -274,10 +254,7 @@ export default function HomePage() {
             <div className="grid grid-cols-2 gap-2.5">
               <Link
                 href="/crew"
-                onClick={() => {
-                  soundFx.playClick();
-                  setRole("FIELD_CREW");
-                }}
+                onClick={() => setRole("FIELD_CREW")}
                 className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-slate-700 bg-slate-900/90 text-center transition-all group hover:border-amber-500/40 hover:bg-slate-800/90 shadow-md"
               >
                 <HardHat className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
@@ -286,10 +263,7 @@ export default function HomePage() {
 
               <Link
                 href="/commissioner"
-                onClick={() => {
-                  soundFx.playClick();
-                  setRole("MUNICIPAL_COMMISSIONER");
-                }}
+                onClick={() => setRole("MUNICIPAL_COMMISSIONER")}
                 className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-slate-700 bg-slate-900/90 text-center transition-all group hover:border-purple-500/40 hover:bg-slate-800/90 shadow-md"
               >
                 <Landmark className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
@@ -438,10 +412,7 @@ export default function HomePage() {
             {categoryFilter !== "ALL" && (
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setCategoryFilter("ALL");
-                }}
+                onClick={() => setCategoryFilter("ALL")}
                 className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
               >
                 Clear Filter
@@ -457,10 +428,7 @@ export default function HomePage() {
               return (
                 <div
                   key={item.category}
-                  onClick={() => {
-                    soundFx.playClick();
-                    setCategoryFilter(isSelected ? "ALL" : item.category);
-                  }}
+                  onClick={() => setCategoryFilter(isSelected ? "ALL" : item.category)}
                   className={`space-y-1.5 p-2.5 rounded-2xl border cursor-pointer transition-all ${
                     isSelected
                       ? "bg-indigo-950/60 border-indigo-400 shadow-md ring-1 ring-indigo-400/40"
@@ -597,10 +565,7 @@ export default function HomePage() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setStatusFilter(tab.id);
-                  }}
+                  onClick={() => setStatusFilter(tab.id)}
                   className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                     statusFilter === tab.id
                       ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/30"
@@ -616,20 +581,14 @@ export default function HomePage() {
             <div className="flex sm:hidden p-1 bg-slate-950 border border-slate-800 rounded-xl text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setMapTab("MAP");
-                }}
+                onClick={() => setMapTab("MAP")}
                 className={`px-2.5 py-1 rounded-lg font-semibold ${mapTab === "MAP" ? "bg-purple-600 text-white" : "text-slate-400"}`}
               >
                 Map
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setMapTab("LIST");
-                }}
+                onClick={() => setMapTab("LIST")}
                 className={`px-2.5 py-1 rounded-lg font-semibold ${mapTab === "LIST" ? "bg-purple-600 text-white" : "text-slate-400"}`}
               >
                 List
@@ -647,10 +606,7 @@ export default function HomePage() {
                   complaints={filteredComplaints}
                   wards={wards}
                   selectedComplaintId={inspectingTicket?.id}
-                  onSelectComplaint={(ticket) => {
-                    soundFx.playClick();
-                    setInspectingTicket(ticket);
-                  }}
+                  onSelectComplaint={(ticket) => setInspectingTicket(ticket)}
                 />
               </div>
             ) : (
@@ -663,10 +619,7 @@ export default function HomePage() {
                   filteredComplaints.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => {
-                        soundFx.playClick();
-                        setInspectingTicket(c);
-                      }}
+                      onClick={() => setInspectingTicket(c)}
                       className={`p-4 bg-slate-950/80 border rounded-2xl space-y-2 text-xs cursor-pointer transition-all shadow-md ${
                         inspectingTicket?.id === c.id
                           ? "border-purple-500 bg-indigo-950/40 ring-1 ring-purple-500/40"
@@ -696,10 +649,7 @@ export default function HomePage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setInspectingTicket(null);
-                  }}
+                  onClick={() => setInspectingTicket(null)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900 border border-slate-800"
                 >
                   <X className="w-4 h-4" />
@@ -763,10 +713,7 @@ export default function HomePage() {
 
                 <Link
                   href="/supervisor"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setRole("WARD_SUPERVISOR");
-                  }}
+                  onClick={() => setRole("WARD_SUPERVISOR")}
                   className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
                 >
                   <span>Triage</span>
